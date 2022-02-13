@@ -1,7 +1,9 @@
 import discord
-from discord.ext import tasks, commands
+from discord.ext import commands
 from discord.commands import slash_command
-import os
+import asyncio
+import requests
+import random
 import json
 import time
 
@@ -12,12 +14,22 @@ class Bot(commands.Bot):
     season_start_month = 10
     season_start_day = 19
 
+    team_win_loss = {}
+
     def __init__(self):
         super().__init__()
+        self.bg_task = self.loop.create_task(self.change_status())
+
+        with open("teams.json", "r") as f:
+            data = json.load(f)
+        
+        for key in data:
+            self.team_win_loss[int(key)] = self.get_win_loss(int(key))
+
+        
 
         @self.slash_command(description="Returns a list of NBA games that are playing")
-        async def games(self, ctx):
-            start = time.time()
+        async def games(ctx):
             t = time.localtime()
 
             embed = discord.Embed(title = "NBA Games Today", color = self.embed_color)
@@ -35,12 +47,11 @@ class Bot(commands.Bot):
                 
                 embed.add_field(name=title, value=body, inline=False)
 
-            embed.set_footer(text=f"Requested by {ctx.author} in {int(round((time.time() - start) * 1000, 0))} milliseconds", icon_url=ctx.author.avatar)
+            embed.set_footer(text=f"Requested by {ctx.author}", icon_url=ctx.author.avatar)
             await ctx.respond(embed=embed)
 
         @self.slash_command(description="Returns a list of NBA teams ranked by winning percentage")
-        async def teams(self, ctx):
-            start = time.time()
+        async def teams(ctx):
             embed = discord.Embed(title = "NBA Teams", color = self.embed_color)
             
             with open("teams.json", "r") as f:
@@ -70,6 +81,9 @@ class Bot(commands.Bot):
                     eastern_body += "*"
 
                 eastern_body += f" ({eastern_team_percentages[key]})\n"
+
+                if i == 9:
+                    eastern_body += "-------------------------------\n"
             
             western_body = ""
             for i, key in enumerate(dict(reversed(sorted(western_team_percentages.items(), key=lambda item: item[1])))):
@@ -87,17 +101,44 @@ class Bot(commands.Bot):
 
                 western_body += f" ({western_team_percentages[key]})\n"
 
+                if i == 9:
+                    western_body += "-------------------------------\n"
+
             embed.add_field(name="Eastern Conference", value=eastern_body)
             embed.add_field(name="Western Conference", value=western_body)
 
-            embed.set_footer(text=f"Requested by {ctx.author} in {int(round((time.time() - start) * 1000, 0))} milliseconds", icon_url=ctx.author.avatar)
+            embed.set_footer(text=f"Requested by {ctx.author}", icon_url=ctx.author.avatar)
             await ctx.respond(embed=embed)
+        
+    async def change_status(self):
+        await self.wait_until_ready()
+
+        while not self.is_closed():
+            t = time.localtime()
+            games = self.get_games(t[0], t[1], t[2])
+
+            active_games = []
+
+            for game in games:
+                if game["status"] != "Final" and not "ET" in game["status"]:
+                    active_games.append(game)
+            
+            if len(active_games) == 0:
+                await self.change_presence(status=discord.Status.idle)
+            
+            else:
+                game = random.choice(active_games)
+                status = f"{game['visitor_team']['name']} vs {game['home_team']['name']}"
+
+                activity = discord.Activity(type=discord.ActivityType.watching, name=status)
+
+                await self.change_presence(status=discord.Status.online, activity=activity)
+            await asyncio.sleep(60 * 10) # 10 minutes 
 
     async def on_ready(self):
         print(f'{self.user} has connected to Discord!')
+        
     
-    
-
     def get_games(self, year, month, day):
         date = f"{year}-{month}-{day}"
         url = f"https://www.balldontlie.io/api/v1/games/?start_date={date}&end_date={date}"
