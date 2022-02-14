@@ -1,6 +1,5 @@
 import discord
 from discord.ext import commands
-from discord.commands import slash_command
 import asyncio
 import requests
 import random
@@ -14,11 +13,15 @@ class Bot(commands.Bot):
     season_start_month = 10
     season_start_day = 19
 
+    thumbnail_link = "https://theprodigious.com/wp-content/uploads/2021/09/nba-logo.jpg"
+
     team_win_loss = {}
+    games_played_today = []
 
     def __init__(self):
         super().__init__()
-        self.bg_task = self.loop.create_task(self.change_status())
+        self.loop.create_task(self.change_status())
+        self.loop.create_task(self.update_games())
 
         with open("teams.json", "r") as f:
             data = json.load(f)
@@ -33,7 +36,7 @@ class Bot(commands.Bot):
             t = time.localtime()
 
             embed = discord.Embed(title = "NBA Games Today", color = self.embed_color)
-            embed.set_thumbnail(url="https://theprodigious.com/wp-content/uploads/2021/09/nba-logo.jpg")
+            embed.set_thumbnail(url=self.thumbnail_link)
 
             for game in self.get_games(t[0], t[1], t[2]):
                 title = f"{game['visitor_team']['full_name']} at {game['home_team']['full_name']}"
@@ -53,6 +56,7 @@ class Bot(commands.Bot):
         @self.slash_command(description="Returns a list of NBA teams ranked by winning percentage")
         async def teams(ctx):
             embed = discord.Embed(title = "NBA Teams", color = self.embed_color)
+            embed.set_thumbnail(url=self.thumbnail_link)
             
             with open("teams.json", "r") as f:
                 data = json.load(f)
@@ -134,6 +138,42 @@ class Bot(commands.Bot):
 
                 await self.change_presence(status=discord.Status.online, activity=activity)
             await asyncio.sleep(60 * 10) # 10 minutes 
+
+    async def update_games(self):
+        await self.wait_until_ready()
+
+        while not self.is_closed():
+            t = time.localtime()
+            games = self.get_games(t[0], t[1], t[2])
+
+            for game in games:
+                if game["status"] == "Final" and not int(game["id"]) in self.games_played_today:
+                    if game["home_team_score"] > game["visitor_team_score"]:
+                        winner_id = game["home_team"]["id"]
+                        loser_id = game["visitor_team"]["id"]
+                    else:
+                        winner_id = game["visitor_team"]["id"]
+                        loser_id = game["home_team"]["id"]
+
+                    win_loss = list(self.team_win_loss[int(winner_id)])
+                    win_loss[0] = win_loss + 1
+
+                    self.team_win_loss[int(winner_id)] = tuple(win_loss)
+
+
+                    win_loss = list(self.team_win_loss[int(winner_id)])
+                    win_loss[1] = win_loss + 1
+
+                    self.team_win_loss[int(loser_id)] = tuple(win_loss)
+
+                    
+                    self.games_played_today.append(int(game["id"]))
+            
+            # Reset games played at 12:15 AM
+            if t[1] == 0 and t[2] == 15:
+                self.games_played_today = []
+
+            await asyncio.sleep(60) # 1 minute
 
     async def on_ready(self):
         print(f'{self.user} has connected to Discord!')
