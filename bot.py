@@ -47,11 +47,16 @@ class Bot(commands.Bot):
                         body += f" **{game['visitor_team']['name'].upper()} WIN**"
                     else:
                         body += f" **{game['home_team']['name'].upper()} WIN**"
+
+                body += f"\n**{game['visitor_team']['abbreviation']}**: ({self.team_win_loss[int(game['visitor_team']['id'])][0]} - {self.team_win_loss[int(game['visitor_team']['id'])][1]})"
+                body += f"\n**{game['home_team']['abbreviation']}**: ({self.team_win_loss[int(game['home_team']['id'])][0]} - {self.team_win_loss[int(game['home_team']['id'])][1]})"
                 
                 embed.add_field(name=title, value=body, inline=False)
 
             embed.set_footer(text=f"Requested by {ctx.author}", icon_url=ctx.author.avatar)
             await ctx.respond(embed=embed)
+
+
 
         @self.slash_command(description="Returns a list of NBA teams ranked by winning percentage")
         async def teams(ctx):
@@ -232,26 +237,3 @@ class Bot(commands.Bot):
                 losses += 1
         
         return (wins, losses)
-    
-
-
-
-if __name__ == "__main__":
-    try:
-        f = open("config.json", "x") # Raises FileExistsError if already present
-        data = {}
-        data["discord-bot-token"] = "{PASTE TOKEN INSIDE QUOTATION MARKS}"
-
-        json.dump(data, f, indent=4)
-        f.close()
-        
-        raise ValueError("Please provide necessary tokens in config.json")
-    except FileExistsError:
-        pass
-
-    # Get token from config.json
-    with open("config.json", "r") as f:
-        data = json.load(f)
-    
-    bot = Bot()
-    bot.run(data["discord-bot-token"])
