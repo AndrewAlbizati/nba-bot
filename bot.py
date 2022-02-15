@@ -25,9 +25,9 @@ class Bot(commands.Bot):
         self.loop.create_task(self.update_games())
 
         with open("teams.json", "r") as f:
-            data = json.load(f)
+            self.team_data = json.load(f)
         
-        for key in data:
+        for key in self.team_data:
             self.team_win_loss[int(key)] = self.get_win_loss(int(key))
 
         
@@ -64,14 +64,11 @@ class Bot(commands.Bot):
             embed = discord.Embed(title = "NBA Teams", color = self.embed_color)
             embed.set_thumbnail(url=self.thumbnail_link)
             
-            with open("teams.json", "r") as f:
-                data = json.load(f)
-            
             eastern_team_percentages = {}
             western_team_percentages = {}
 
             for key in self.team_win_loss:
-                if data[str(key)]["conference"] == "East":
+                if self.team_data[str(key)]["conference"] == "East":
                     eastern_team_percentages[key] = round(self.team_win_loss[key][0] / (self.team_win_loss[key][0] + self.team_win_loss[key][1]), 3)
                 else:
                     western_team_percentages[key] = round(self.team_win_loss[key][0] / (self.team_win_loss[key][0] + self.team_win_loss[key][1]), 3)
@@ -83,7 +80,7 @@ class Bot(commands.Bot):
                 elif i >= 6 and i <= 9:
                     eastern_body += "*"
 
-                eastern_body += f"{i + 1}. {data[str(key)]['full_name']}"
+                eastern_body += f"{i + 1}. {self.team_data[str(key)]['full_name']}"
 
                 if i < 6:
                     eastern_body += "**"
@@ -102,7 +99,7 @@ class Bot(commands.Bot):
                 elif i >= 6 and i <= 9:
                     western_body += "*"
 
-                western_body += f"{i + 1}. {data[str(key)]['full_name']}"
+                western_body += f"{i + 1}. {self.team_data[str(key)]['full_name']}"
 
                 if i < 6:
                     western_body += "**"
@@ -123,23 +120,40 @@ class Bot(commands.Bot):
 
 
         @self.slash_command(name="team",description="Get stats on a particular NBA team")
-        async def team(ctx, name: Option(str, "NBA team name", autocomplete=self.get_autocompleted_team_names)):
-            with open("teams.json", "r") as f:
-                data = json.load(f)
-            
+        async def team(ctx, name: Option(str, "NBA team name", autocomplete=self.get_autocompleted_team_names)):    
             team_id = 0
-            for key in data:
-                if data[key]["full_name"].lower() == name.lower() or data[key]["name"].lower() == name.lower():
-                    name = data[key]["full_name"]
+            for key in self.team_data:
+                if self.team_data[key]["full_name"].lower() == name.lower() or self.team_data[key]["name"].lower() == name.lower():
+                    name = self.team_data[key]["full_name"]
                     team_id = int(key)
             
             if team_id == 0:
                 await ctx.respond("Please pick a valid NBA team!", ephemeral=True)
                 return
             
-            embed = discord.Embed(title=name)
-            embed.color = discord.Color.from_rgb(data[str(team_id)]["color"][0], data[str(team_id)]["color"][1], data[str(team_id)]["color"][2])
-            embed.set_thumbnail(url=data[str(team_id)]["logo"])
+            embed = discord.Embed(title=f"{name} ({self.team_data[str(team_id)]['abbreviation']})")
+            embed.color = discord.Color.from_rgb(self.team_data[str(team_id)]["color"][0], self.team_data[str(team_id)]["color"][1], self.team_data[str(team_id)]["color"][2])
+            embed.set_thumbnail(url=self.team_data[str(team_id)]["logo"])
+
+            win_loss = self.get_win_loss(team_id)
+
+            conference_percentages = {}
+
+            for key in self.team_win_loss:
+                if self.team_data[str(key)]["conference"] == self.team_data[str(team_id)]["conference"]:
+                    conference_percentages[key] = round(self.team_win_loss[key][0] / (self.team_win_loss[key][0] + self.team_win_loss[key][1]), 3)
+            
+            rank = 1
+            for key in dict(reversed(sorted(conference_percentages.items(), key=lambda item: item[1]))):
+                if key != team_id:
+                    rank += 1
+                else:
+                    break
+            
+            get_ordinal = lambda n: "%d%s"%(n,{1:"st",2:"nd",3:"rd"}.get(n if n<20 else n%10,"th"))
+            rank_in_conference = get_ordinal(rank)
+
+            embed.add_field(name="Win/Loss",value=f"**{win_loss[0]} - {win_loss[1]}** ({round(win_loss[0] / (win_loss[0] + win_loss[1]), 3)})\n*{rank_in_conference.upper()} IN {self.team_data[str(key)]['conference'].upper()}*")
 
             await ctx.respond(embed=embed)
     
