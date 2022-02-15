@@ -1,4 +1,5 @@
 import discord
+from discord import Option
 from discord.ext import commands
 import asyncio
 import requests
@@ -7,7 +8,7 @@ import json
 import time
 
 class Bot(commands.Bot):
-    embed_color = 0x22529a
+    embed_color = 0x1d428a
 
     season_start_year = 2021
     season_start_month = 10
@@ -31,7 +32,7 @@ class Bot(commands.Bot):
 
         
 
-        @self.slash_command(description="Returns a list of NBA games that are playing")
+        @self.slash_command(name="games",description="Lists NBA games that are playing today")
         async def games(ctx):
             t = time.localtime()
 
@@ -58,8 +59,8 @@ class Bot(commands.Bot):
 
 
 
-        @self.slash_command(description="Returns a list of NBA teams ranked by winning percentage")
-        async def teams(ctx):
+        @self.slash_command(name="standings",description="Lists NBA teams ranked by winning percentage")
+        async def standings(ctx):
             embed = discord.Embed(title = "NBA Teams", color = self.embed_color)
             embed.set_thumbnail(url=self.thumbnail_link)
             
@@ -119,6 +120,33 @@ class Bot(commands.Bot):
             embed.set_footer(text=f"Requested by {ctx.author}", icon_url=ctx.author.avatar)
             await ctx.respond(embed=embed)
         
+
+
+        @self.slash_command(name="team",description="Get stats on a particular NBA team")
+        async def team(ctx, name: Option(str, "NBA team name", autocomplete=self.get_autocompleted_team_names)):
+            with open("teams.json", "r") as f:
+                data = json.load(f)
+            
+            team_id = 0
+            for key in data:
+                if data[key]["full_name"].lower() == name.lower() or data[key]["name"].lower() == name.lower():
+                    name = data[key]["full_name"]
+                    team_id = int(key)
+            
+            if team_id == 0:
+                await ctx.respond("Please pick a valid NBA team!", ephemeral=True)
+                return
+            
+            embed = discord.Embed(title=name)
+            embed.color = discord.Color.from_rgb(data[str(team_id)]["color"][0], data[str(team_id)]["color"][1], data[str(team_id)]["color"][2])
+            embed.set_thumbnail(url=data[str(team_id)]["logo"])
+
+            await ctx.respond(embed=embed)
+    
+    async def get_autocompleted_team_names(self, ctx):
+        names = ["Atlanta Hawks", "Boston Celtics", "Brooklyn Nets", "Charlotte Hornets", "Chicago Bulls", "Cleveland Cavaliers", "Dallas Mavericks", "Denver Nuggets", "Detroit Pistons", "Golden State Warrios", "Houston Rockets", "Indiana Pacers", "Los Angeles Clippers", "Los Angeles Lakers", "Memphis Grizzlies", "Miami Heat", "Milwaukee", "Minnesota Timberwolves", "New Orleans Pelicans", "New York Knicks", "Oklahoma City Thunder", "Orlando Magic", "Philadelphia 76ers", "Phoenix Suns", "Portland Trail Blazers", "Sacramento Kings", "Toronto Raptors", "Utah Jazz", "Washington Wizards"]
+        return [name for name in names if ctx.value.lower() in name.lower()]
+    
     async def change_status(self):
         await self.wait_until_ready()
 
@@ -161,13 +189,13 @@ class Bot(commands.Bot):
                         loser_id = game["home_team"]["id"]
 
                     win_loss = list(self.team_win_loss[int(winner_id)])
-                    win_loss[0] = win_loss + 1
+                    win_loss[0] = win_loss[0] + 1
 
                     self.team_win_loss[int(winner_id)] = tuple(win_loss)
 
 
                     win_loss = list(self.team_win_loss[int(winner_id)])
-                    win_loss[1] = win_loss + 1
+                    win_loss[1] = win_loss[1] + 1
 
                     self.team_win_loss[int(loser_id)] = tuple(win_loss)
 
