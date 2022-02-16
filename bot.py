@@ -1,11 +1,11 @@
 import discord
-from discord import Option
 from discord.ext import commands
 import asyncio
 import requests
 import random
 import json
 import time
+import os
 
 class Bot(commands.Bot):
     embed_color = 0x1d428a
@@ -30,136 +30,11 @@ class Bot(commands.Bot):
         for key in self.team_data:
             self.team_win_loss[int(key)] = self.get_win_loss(int(key))
 
-        
+        for cog in os.listdir("./cogs"):
+            if cog.endswith(".py"):
+                self.load_extension(f"cogs.{cog[:-3]}")
+                print("Loaded " + cog)
 
-        @self.slash_command(name="games",description="Lists NBA games that are playing today")
-        async def games(ctx):
-            t = time.localtime()
-
-            embed = discord.Embed(title = "NBA Games Today", color = self.embed_color)
-            embed.set_thumbnail(url=self.thumbnail_link)
-
-            for game in self.get_games(t[0], t[1], t[2]):
-                title = f"{game['visitor_team']['full_name']} at {game['home_team']['full_name']}"
-                body = f"{game['status']} ({game['visitor_team_score']} - {game['home_team_score']})"
-
-                if game["status"].lower() == "final":
-                    if game['visitor_team_score'] > game['home_team_score']:
-                        body += f" **{game['visitor_team']['name'].upper()} WIN**"
-                    else:
-                        body += f" **{game['home_team']['name'].upper()} WIN**"
-
-                body += f"\n**{game['visitor_team']['abbreviation']}**: ({self.team_win_loss[int(game['visitor_team']['id'])][0]} - {self.team_win_loss[int(game['visitor_team']['id'])][1]})"
-                body += f"\n**{game['home_team']['abbreviation']}**: ({self.team_win_loss[int(game['home_team']['id'])][0]} - {self.team_win_loss[int(game['home_team']['id'])][1]})"
-                
-                embed.add_field(name=title, value=body, inline=False)
-
-            embed.set_footer(text=f"Requested by {ctx.author}", icon_url=ctx.author.avatar)
-            await ctx.respond(embed=embed)
-
-
-
-        @self.slash_command(name="standings",description="Lists NBA teams ranked by winning percentage")
-        async def standings(ctx):
-            embed = discord.Embed(title = "NBA Teams", color = self.embed_color)
-            embed.set_thumbnail(url=self.thumbnail_link)
-            
-            eastern_team_percentages = {}
-            western_team_percentages = {}
-
-            for key in self.team_win_loss:
-                if self.team_data[str(key)]["conference"] == "East":
-                    eastern_team_percentages[key] = round(self.team_win_loss[key][0] / (self.team_win_loss[key][0] + self.team_win_loss[key][1]), 3)
-                else:
-                    western_team_percentages[key] = round(self.team_win_loss[key][0] / (self.team_win_loss[key][0] + self.team_win_loss[key][1]), 3)
-            
-            eastern_body = ""
-            for i, key in enumerate(dict(reversed(sorted(eastern_team_percentages.items(), key=lambda item: item[1])))):
-                if i < 6:
-                    eastern_body += "**"
-                elif i >= 6 and i <= 9:
-                    eastern_body += "*"
-
-                eastern_body += f"{i + 1}. {self.team_data[str(key)]['full_name']}"
-
-                if i < 6:
-                    eastern_body += "**"
-                elif i >= 6 and i <= 9:
-                    eastern_body += "*"
-
-                eastern_body += f" ({eastern_team_percentages[key]})\n"
-
-                if i == 9:
-                    eastern_body += "-------------------------------\n"
-            
-            western_body = ""
-            for i, key in enumerate(dict(reversed(sorted(western_team_percentages.items(), key=lambda item: item[1])))):
-                if i < 6:
-                    western_body += "**"
-                elif i >= 6 and i <= 9:
-                    western_body += "*"
-
-                western_body += f"{i + 1}. {self.team_data[str(key)]['full_name']}"
-
-                if i < 6:
-                    western_body += "**"
-                elif i >= 6 and i <= 9:
-                    western_body += "*"
-
-                western_body += f" ({western_team_percentages[key]})\n"
-
-                if i == 9:
-                    western_body += "-------------------------------\n"
-
-            embed.add_field(name="Eastern Conference", value=eastern_body)
-            embed.add_field(name="Western Conference", value=western_body)
-
-            embed.set_footer(text=f"Requested by {ctx.author}", icon_url=ctx.author.avatar)
-            await ctx.respond(embed=embed)
-        
-
-
-        @self.slash_command(name="team",description="Get stats on a particular NBA team")
-        async def team(ctx, name: Option(str, "NBA team name", autocomplete=self.get_autocompleted_team_names)):    
-            team_id = 0
-            for key in self.team_data:
-                if self.team_data[key]["full_name"].lower() == name.lower() or self.team_data[key]["name"].lower() == name.lower():
-                    name = self.team_data[key]["full_name"]
-                    team_id = int(key)
-            
-            if team_id == 0:
-                await ctx.respond("Please pick a valid NBA team!", ephemeral=True)
-                return
-            
-            embed = discord.Embed(title=f"{name} ({self.team_data[str(team_id)]['abbreviation']})")
-            embed.color = discord.Color.from_rgb(self.team_data[str(team_id)]["color"][0], self.team_data[str(team_id)]["color"][1], self.team_data[str(team_id)]["color"][2])
-            embed.set_thumbnail(url=self.team_data[str(team_id)]["logo"])
-
-            win_loss = self.get_win_loss(team_id)
-
-            conference_percentages = {}
-
-            for key in self.team_win_loss:
-                if self.team_data[str(key)]["conference"] == self.team_data[str(team_id)]["conference"]:
-                    conference_percentages[key] = round(self.team_win_loss[key][0] / (self.team_win_loss[key][0] + self.team_win_loss[key][1]), 3)
-            
-            rank = 1
-            for key in dict(reversed(sorted(conference_percentages.items(), key=lambda item: item[1]))):
-                if key != team_id:
-                    rank += 1
-                else:
-                    break
-            
-            get_ordinal = lambda n: "%d%s"%(n,{1:"st",2:"nd",3:"rd"}.get(n if n<20 else n%10,"th"))
-            rank_in_conference = get_ordinal(rank)
-
-            embed.add_field(name="Win/Loss",value=f"**{win_loss[0]} - {win_loss[1]}** ({round(win_loss[0] / (win_loss[0] + win_loss[1]), 3)})\n*{rank_in_conference.upper()} IN {self.team_data[str(key)]['conference'].upper()}*")
-
-            await ctx.respond(embed=embed)
-    
-    async def get_autocompleted_team_names(self, ctx):
-        names = ["Atlanta Hawks", "Boston Celtics", "Brooklyn Nets", "Charlotte Hornets", "Chicago Bulls", "Cleveland Cavaliers", "Dallas Mavericks", "Denver Nuggets", "Detroit Pistons", "Golden State Warrios", "Houston Rockets", "Indiana Pacers", "Los Angeles Clippers", "Los Angeles Lakers", "Memphis Grizzlies", "Miami Heat", "Milwaukee", "Minnesota Timberwolves", "New Orleans Pelicans", "New York Knicks", "Oklahoma City Thunder", "Orlando Magic", "Philadelphia 76ers", "Phoenix Suns", "Portland Trail Blazers", "Sacramento Kings", "Toronto Raptors", "Utah Jazz", "Washington Wizards"]
-        return [name for name in names if ctx.value.lower() in name.lower()]
     
     async def change_status(self):
         await self.wait_until_ready()
