@@ -2,6 +2,8 @@ from discord.commands import slash_command
 from discord.ext import commands
 from discord import Option
 import discord
+import time
+import requests
 
 async def get_autocompleted_team_names(ctx):
     names = ["Atlanta Hawks", "Boston Celtics", "Brooklyn Nets", "Charlotte Hornets", "Chicago Bulls", "Cleveland Cavaliers", "Dallas Mavericks", "Denver Nuggets", "Detroit Pistons", "Golden State Warriors", "Houston Rockets", "Indiana Pacers", "LA Clippers", "Los Angeles Lakers", "Memphis Grizzlies", "Miami Heat", "Milwaukee Bucks", "Minnesota Timberwolves", "New Orleans Pelicans", "New York Knicks", "Oklahoma City Thunder", "Orlando Magic", "Philadelphia 76ers", "Phoenix Suns", "Portland Trail Blazers", "Sacramento Kings", "Toronto Raptors", "Utah Jazz", "Washington Wizards"]
@@ -45,10 +47,84 @@ class Team(commands.Cog):
         get_ordinal = lambda n: "%d%s"%(n,{1:"st",2:"nd",3:"rd"}.get(n if n<20 else n%10,"th"))
         rank_in_conference = get_ordinal(rank)
 
-        embed.add_field(name="Win/Loss",value=f"**{win_loss[0]} - {win_loss[1]}** ({round(win_loss[0] / (win_loss[0] + win_loss[1]), 3)})\n*{rank_in_conference.upper()} IN {self.bot.team_data[str(key)]['conference'].upper()}*")
+        embed.add_field(name="Season Win/Loss",value=f"**{win_loss[0]} - {win_loss[1]}** ({round(win_loss[0] / (win_loss[0] + win_loss[1]), 3)})\n*{rank_in_conference.upper()} IN {self.bot.team_data[str(key)]['conference'].upper()}*")
+        
+        last_ten = self.get_last_ten(key)
+        embed.add_field(name="L10",value=f"{last_ten[0]} - {last_ten[1]}")
+
+        last_five = self.get_last_scores(team_id, 5)
+        embed.add_field(name="Last 5", value="\n".join(last_five))
 
         await ctx.respond(embed=embed)
-    
 
+    def get_last_ten(self, team_id):
+        t = time.localtime()
+        url = f"https://www.balldontlie.io/api/v1/games?start_date={self.bot.season_start_year}-{self.bot.season_start_month}-{self.bot.season_start_day}&end_date={t[0]}-{t[1]}-{t[2]}&team_ids[]={team_id}&per_page=100"
+
+        r = requests.get(url)
+
+        games = {}
+        data = r.json()["data"]
+        for game in data:
+            if game["status"] == "Final":
+                games[int(game["id"])] = game
+        sorted_games = sorted(games)
+        sorted_games.reverse()
+
+        wins = 0
+        losses = 0
+        for i in range(10 if len(sorted_games) >= 10 else len(sorted_games)):
+            game = games[sorted_games[i]]
+
+            if int(game["home_team"]["id"]) == int(team_id):
+                if game["home_team_score"] > game["visitor_team_score"]:
+                    wins += 1
+                    continue
+            else:
+                if game["home_team_score"] < game["visitor_team_score"]:
+                    wins += 1
+                    continue
+                    
+            losses += 1
+
+        return (wins, losses)
+
+    def get_last_scores(self, team_id, n):
+        t = time.localtime()
+        url = f"https://www.balldontlie.io/api/v1/games?start_date={self.bot.season_start_year}-{self.bot.season_start_month}-{self.bot.season_start_day}&end_date={t[0]}-{t[1]}-{t[2]}&team_ids[]={team_id}&per_page=100"
+
+        r = requests.get(url)
+
+        games = {}
+        data = r.json()["data"]
+        for game in data:
+            if game["status"] == "Final":
+                games[int(game["id"])] = game
+        sorted_games = sorted(games)
+        sorted_games.reverse()
+
+        data = []
+
+        for i in range(n if len(sorted_games) >= n else len(sorted_games)):
+            game = games[sorted_games[i]]
+            
+            game_data = ""
+
+            if int(game["home_team"]["id"]) == int(team_id):
+                game_data += "vs " + game['visitor_team']['name']
+                if game["home_team_score"] > game["visitor_team_score"]:
+                    game_data += f" (**W** {game['home_team_score']} - {game['visitor_team_score']})"
+                else:
+                    game_data += f" (**L** {game['visitor_team_score']} - {game['home_team_score']})"
+            else:
+                game_data += "at " + game['visitor_team']['name']
+                if game["home_team_score"] < game["visitor_team_score"]:
+                    game_data += f" (**W** {game['visitor_team_score']} - {game['home_team_score']})"
+                else:
+                    game_data += f" (**L** {game['home_team_score']} - {game['visitor_team_score']})"
+                    
+            data.append(game_data)
+
+        return data
 def setup(bot):
     bot.add_cog(Team(bot))
