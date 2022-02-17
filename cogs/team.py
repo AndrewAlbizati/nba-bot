@@ -48,46 +48,23 @@ class Team(commands.Cog):
         rank_in_conference = get_ordinal(rank)
 
         embed.add_field(name="Season Win/Loss",value=f"**{win_loss[0]} - {win_loss[1]}** ({round(win_loss[0] / (win_loss[0] + win_loss[1]), 3)})\n*{rank_in_conference.upper()} IN {self.bot.team_data[str(key)]['conference'].upper()}*")
-        
-        last_ten = self.get_last_ten(key)
-        embed.add_field(name="L10",value=f"{last_ten[0]} - {last_ten[1]}")
 
-        last_five = self.get_last_scores(team_id, 5)
-        embed.add_field(name="Last 5", value="\n".join(last_five))
-
-        await ctx.respond(embed=embed)
-
-    def get_last_ten(self, team_id):
-        t = time.localtime()
-        url = f"https://www.balldontlie.io/api/v1/games?start_date={self.bot.season_start_year}-{self.bot.season_start_month}-{self.bot.season_start_day}&end_date={t[0]}-{t[1]}-{t[2]}&team_ids[]={team_id}&per_page=100"
-
-        r = requests.get(url)
-
-        games = {}
-        data = r.json()["data"]
-        for game in data:
-            if game["status"] == "Final":
-                games[int(game["id"])] = game
-        sorted_games = sorted(games)
-        sorted_games.reverse()
-
+        last_ten = self.get_last_scores(team_id, 10)
         wins = 0
         losses = 0
-        for i in range(10 if len(sorted_games) >= 10 else len(sorted_games)):
-            game = games[sorted_games[i]]
+        
 
-            if int(game["home_team"]["id"]) == int(team_id):
-                if game["home_team_score"] > game["visitor_team_score"]:
-                    wins += 1
-                    continue
+        for game in last_ten:
+            if "(W" in game:
+                wins += 1
             else:
-                if game["home_team_score"] < game["visitor_team_score"]:
-                    wins += 1
-                    continue
-                    
-            losses += 1
+                losses += 1
 
-        return (wins, losses)
+        embed.add_field(name=f"Last {len(last_ten)} Games ({wins} - {losses})", value="\n".join(last_ten))
+
+        embed.add_field(name="Streak", value=self.get_streak(team_id))
+
+        await ctx.respond(embed=embed)
 
     def get_last_scores(self, team_id, n):
         t = time.localtime()
@@ -126,5 +103,57 @@ class Team(commands.Cog):
             data.append(game_data)
 
         return data
+    
+    def get_streak(self, team_id):
+        t = time.localtime()
+        url = f"https://www.balldontlie.io/api/v1/games?start_date={self.bot.season_start_year}-{self.bot.season_start_month}-{self.bot.season_start_day}&end_date={t[0]}-{t[1]}-{t[2]}&team_ids[]={team_id}&per_page=100"
+
+        r = requests.get(url)
+
+        games = {}
+        data = r.json()["data"]
+        for game in data:
+            if game["status"] == "Final":
+                games[int(game["id"])] = game
+        sorted_games = sorted(games)
+        sorted_games.reverse()
+
+        data = []
+
+        last_game = games[sorted_games[0]]
+
+        if int(last_game["home_team"]["id"]) == int(team_id):
+            if last_game["home_team_score"] > last_game["visitor_team_score"]:
+                on_winning_streak = True
+            else:
+                on_winning_streak = False
+        else:
+            if last_game["home_team_score"] < last_game["visitor_team_score"]:
+                on_winning_streak = True
+            else:
+                on_winning_streak = False
+        
+
+        streak = 1
+        for game in sorted_games:
+            if int(last_game["home_team"]["id"]) == int(team_id):
+                if last_game["home_team_score"] > last_game["visitor_team_score"]:
+                    win = True
+                else:
+                    win = False
+            else:
+                if last_game["home_team_score"] < last_game["visitor_team_score"]:
+                    win = True
+                else:
+                    win = False
+            
+            if win == on_winning_streak:
+                streak += 1
+            else:
+                break
+            
+        return f"{streak}{'W' if on_winning_streak else 'L'}"
+
+
 def setup(bot):
     bot.add_cog(Team(bot))
