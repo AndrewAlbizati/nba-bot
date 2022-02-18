@@ -15,4 +15,4 @@ This Discord bot was written in Python 3.10 and is designed for smaller Discord 
 
 
 ## Dependencies
-- Pycord (https://pypi.org/project/py-cord/)
+- Pycord (https://pypi.org/project/py-cord/) `pip install py-cord==2.0.0b4`

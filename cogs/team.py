@@ -43,37 +43,62 @@ class Team(commands.Cog):
                 rank += 1
             else:
                 break
-        
+
         get_ordinal = lambda n: "%d%s"%(n,{1:"st",2:"nd",3:"rd"}.get(n if n<20 else n%10,"th"))
         rank_in_conference = get_ordinal(rank)
 
-        embed.add_field(name="Season Win/Loss",value=f"**{win_loss[0]} - {win_loss[1]}** ({round(win_loss[0] / (win_loss[0] + win_loss[1]), 3)})\n*{rank_in_conference.upper()} IN {self.bot.team_data[str(key)]['conference'].upper()}*")
+        embed.add_field(name="Season Win/Loss",value=f"**{win_loss[0]} - {win_loss[1]}** ({round(win_loss[0] / (win_loss[0] + win_loss[1]), 3)})\n*{rank_in_conference.upper()} IN {self.bot.team_data[str(key)]['conference'].upper()}*", inline=False)
 
-        last_ten = self.get_last_scores(team_id, 10)
-        wins = 0
-        losses = 0
-        
 
-        for game in last_ten:
-            if "(W" in game:
-                wins += 1
-            else:
-                losses += 1
-
-        embed.add_field(name=f"Last {len(last_ten)} Games ({wins} - {losses})", value="\n".join(last_ten))
-
-        embed.add_field(name="Streak", value=self.get_streak(team_id))
-
-        await ctx.respond(embed=embed)
-
-    def get_last_scores(self, team_id, n):
         t = time.localtime()
         url = f"https://www.balldontlie.io/api/v1/games?start_date={self.bot.season_start_year}-{self.bot.season_start_month}-{self.bot.season_start_day}&end_date={t[0]}-{t[1]}-{t[2]}&team_ids[]={team_id}&per_page=100"
 
         r = requests.get(url)
-
-        games = {}
         data = r.json()["data"]
+
+        home_wins = 0
+        home_losses = 0
+        away_wins = 0
+        away_losses = 0
+        for game in data:
+            if game["status"] != "Final":
+                continue
+
+            if int(game["home_team"]["id"]) == int(team_id):
+                if game["home_team_score"] > game["visitor_team_score"]:
+                    home_wins += 1
+                else:
+                    home_losses += 1
+            else:
+                if game["home_team_score"] < game["visitor_team_score"]:
+                    away_wins += 1
+                else:
+                    away_losses += 1
+
+        embed.add_field(name="Home", value=f"{home_wins} - {home_losses}", inline=True)
+
+        embed.add_field(name="Away", value=f"{away_wins} - {away_losses}", inline=True)
+
+        embed.add_field(name="Streak", value=self.get_streak(data, team_id), inline=True)
+
+        
+        last_five = self.get_last_scores(data, team_id, 5)
+        wins = 0
+        losses = 0
+        
+        for game in last_five:
+            if "**W**" in game:
+                wins += 1
+            else:
+                losses += 1
+
+        embed.add_field(name=f"Last {len(last_five)} Games ({wins} - {losses})", value="\n".join(last_five), inline=False)
+
+        await ctx.respond(embed=embed)
+
+    def get_last_scores(self, data, team_id, n):
+        games = {}
+
         for game in data:
             if game["status"] == "Final":
                 games[int(game["id"])] = game
@@ -94,7 +119,7 @@ class Team(commands.Cog):
                 else:
                     game_data += f" (**L** {game['visitor_team_score']} - {game['home_team_score']})"
             else:
-                game_data += "at " + game['visitor_team']['name']
+                game_data += "at " + game['home_team']['name']
                 if game["home_team_score"] < game["visitor_team_score"]:
                     game_data += f" (**W** {game['visitor_team_score']} - {game['home_team_score']})"
                 else:
@@ -104,14 +129,8 @@ class Team(commands.Cog):
 
         return data
     
-    def get_streak(self, team_id):
-        t = time.localtime()
-        url = f"https://www.balldontlie.io/api/v1/games?start_date={self.bot.season_start_year}-{self.bot.season_start_month}-{self.bot.season_start_day}&end_date={t[0]}-{t[1]}-{t[2]}&team_ids[]={team_id}&per_page=100"
-
-        r = requests.get(url)
-
+    def get_streak(self, data, team_id):
         games = {}
-        data = r.json()["data"]
         for game in data:
             if game["status"] == "Final":
                 games[int(game["id"])] = game
@@ -134,15 +153,16 @@ class Team(commands.Cog):
                 on_winning_streak = False
         
 
-        streak = 1
-        for game in sorted_games:
-            if int(last_game["home_team"]["id"]) == int(team_id):
-                if last_game["home_team_score"] > last_game["visitor_team_score"]:
+        streak = 0
+        for game_key in sorted_games:
+            game = games[game_key]
+            if int(game["home_team"]["id"]) == int(team_id):
+                if game["home_team_score"] > game["visitor_team_score"]:
                     win = True
                 else:
                     win = False
             else:
-                if last_game["home_team_score"] < last_game["visitor_team_score"]:
+                if game["home_team_score"] < game["visitor_team_score"]:
                     win = True
                 else:
                     win = False
