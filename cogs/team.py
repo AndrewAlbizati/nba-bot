@@ -64,15 +64,20 @@ class Team(commands.Cog):
             if game["status"] != "Final":
                 continue
 
+            # Fix incorrect game score
+            if game["id"] == 474073:
+                game["home_team_score"] = 101
+                game["visitor_team_score"] = 95
+
             if int(game["home_team"]["id"]) == int(team_id):
                 if game["home_team_score"] > game["visitor_team_score"]:
                     home_wins += 1
-                else:
+                elif game["home_team_score"] < game["visitor_team_score"]:
                     home_losses += 1
             else:
                 if game["home_team_score"] < game["visitor_team_score"]:
                     away_wins += 1
-                else:
+                elif game["home_team_score"] > game["visitor_team_score"]:
                     away_losses += 1
 
         embed.add_field(name="Home", value=f"{home_wins} - {home_losses}", inline=True)
@@ -113,19 +118,22 @@ class Team(commands.Cog):
             game_data = ""
 
             if int(game["home_team"]["id"]) == int(team_id):
-                game_data += "vs " + game['visitor_team']['name']
                 if game["home_team_score"] > game["visitor_team_score"]:
+                    game_data += "vs " + game['visitor_team']['name']
                     game_data += f" (**W** {game['home_team_score']} - {game['visitor_team_score']})"
-                else:
+                elif game["home_team_score"] < game["visitor_team_score"]:
+                    game_data += "vs " + game['visitor_team']['name']
                     game_data += f" (**L** {game['visitor_team_score']} - {game['home_team_score']})"
             else:
-                game_data += "at " + game['home_team']['name']
                 if game["home_team_score"] < game["visitor_team_score"]:
+                    game_data += "at " + game['home_team']['name']
                     game_data += f" (**W** {game['visitor_team_score']} - {game['home_team_score']})"
-                else:
+                elif game["home_team_score"] > game["visitor_team_score"]:
+                    game_data += "at " + game['home_team']['name']
                     game_data += f" (**L** {game['home_team_score']} - {game['visitor_team_score']})"
                     
-            data.append(game_data)
+            if len(game_data) > 0:
+                data.append(game_data)
 
         return data
     

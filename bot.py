@@ -65,31 +65,39 @@ class Bot(commands.Bot):
         await self.wait_until_ready()
 
         while not self.is_closed():
-            t = time.localtime()
-            games = self.get_games(t[0], t[1], t[2])
+            try:
+                t = time.localtime()
+                games = self.get_games(t[0], t[1], t[2])
 
-            for game in games:
-                if game["status"] == "Final" and not int(game["id"]) in self.games_played_today:
-                    if game["home_team_score"] > game["visitor_team_score"]:
-                        winner_id = game["home_team"]["id"]
-                        loser_id = game["visitor_team"]["id"]
-                    else:
-                        winner_id = game["visitor_team"]["id"]
-                        loser_id = game["home_team"]["id"]
+                for game in games:
+                    if game["status"] == "Final" and not int(game["id"]) in self.games_played_today:
+                        if game["home_team_score"] > game["visitor_team_score"]:
+                            winner_id = game["home_team"]["id"]
+                            loser_id = game["visitor_team"]["id"]
+                        elif game["home_team_score"] < game["visitor_team_score"]:
+                            winner_id = game["visitor_team"]["id"]
+                            loser_id = game["home_team"]["id"]
+                        
+                        if winner_id == None or loser_id == None:
+                            continue
 
-                    win_loss = list(self.team_win_loss[int(winner_id)])
-                    win_loss[0] = win_loss[0] + 1
+                        win_loss = list(self.team_win_loss[int(winner_id)])
+                        win_loss[0] = win_loss[0] + 1
 
-                    self.team_win_loss[int(winner_id)] = tuple(win_loss)
+                        self.team_win_loss[int(winner_id)] = tuple(win_loss)
 
 
-                    win_loss = list(self.team_win_loss[int(winner_id)])
-                    win_loss[1] = win_loss[1] + 1
+                        win_loss = list(self.team_win_loss[int(winner_id)])
+                        win_loss[1] = win_loss[1] + 1
 
-                    self.team_win_loss[int(loser_id)] = tuple(win_loss)
+                        self.team_win_loss[int(loser_id)] = tuple(win_loss)
 
-                    
-                    self.games_played_today.append(int(game["id"]))
+                        
+                        self.games_played_today.append(int(game["id"]))
+                
+            except Exception as e:
+                print(e)
+
             
             # Reset games played at 12:15 AM
             if t[1] == 0 and t[2] == 15:
@@ -142,15 +150,20 @@ class Bot(commands.Bot):
                     if month == self.season_start_month and day < self.season_start_day:
                         continue
                 
+                # Fix incorrect game score
+                if game["id"] == 474073:
+                    game["home_team_score"] = 101
+                    game["visitor_team_score"] = 95
+                
                 if game["home_team"]["id"] == team_id:
                     if game["home_team_score"] > game["visitor_team_score"]:
                         wins += 1
-                        continue
+                    elif game["home_team_score"] < game["visitor_team_score"]:
+                        losses += 1
                 else:
                     if game["home_team_score"] < game["visitor_team_score"]:
                         wins += 1
-                        continue
-                
-                losses += 1
+                    elif game["home_team_score"] > game["visitor_team_score"]:
+                        losses += 1
         
         return (wins, losses)
