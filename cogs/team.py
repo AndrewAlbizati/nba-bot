@@ -4,6 +4,7 @@ from discord import Option
 import discord
 import time
 import requests
+import nba
 
 async def get_autocompleted_team_names(ctx):
     names = ["Atlanta Hawks", "Boston Celtics", "Brooklyn Nets", "Charlotte Hornets", "Chicago Bulls", "Cleveland Cavaliers", "Dallas Mavericks", "Denver Nuggets", "Detroit Pistons", "Golden State Warriors", "Houston Rockets", "Indiana Pacers", "LA Clippers", "Los Angeles Lakers", "Memphis Grizzlies", "Miami Heat", "Milwaukee Bucks", "Minnesota Timberwolves", "New Orleans Pelicans", "New York Knicks", "Oklahoma City Thunder", "Orlando Magic", "Philadelphia 76ers", "Phoenix Suns", "Portland Trail Blazers", "Sacramento Kings", "Toronto Raptors", "Utah Jazz", "Washington Wizards"]
@@ -51,10 +52,8 @@ class Team(commands.Cog):
 
 
         t = time.localtime()
-        url = f"https://www.balldontlie.io/api/v1/games?start_date={self.bot.season_start_year}-{self.bot.season_start_month}-{self.bot.season_start_day}&end_date={t[0]}-{t[1]}-{t[2]}&team_ids[]={team_id}&per_page=100"
 
-        r = requests.get(url)
-        data = r.json()["data"]
+        data = nba.get_games(start_date=f"{self.bot.season_start_year}-{self.bot.season_start_month}-{self.bot.season_start_day}", end_date=f"{t[0]}-{t[1]}-{t[2]}", team_ids=[team_id], per_page=100)["data"]
 
         home_wins = 0
         home_losses = 0

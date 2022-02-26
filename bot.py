@@ -6,6 +6,7 @@ import random
 import json
 import time
 import os
+import nba
 
 class Bot(commands.Bot):
     embed_color = 0x1d428a
@@ -41,7 +42,7 @@ class Bot(commands.Bot):
 
         while not self.is_closed():
             t = time.localtime()
-            games = self.get_games(t[0], t[1], t[2])
+            games = nba.get_games(start_date=f"{t[0]}-{t[1]}-{t[2]}", per_page=100)["data"]
 
             active_games = []
 
@@ -67,7 +68,7 @@ class Bot(commands.Bot):
         while not self.is_closed():
             try:
                 t = time.localtime()
-                games = self.get_games(t[0], t[1], t[2])
+                games = nba.get_games(start_date=f"{t[0]}-{t[1]}-{t[2]}", per_page=100)["data"]
 
                 for game in games:
                     if game["status"] == "Final" and not int(game["id"]) in self.games_played_today:
@@ -109,24 +110,15 @@ class Bot(commands.Bot):
         print(f'{self.user} has connected to Discord!')
         
     
-    def get_games(self, year, month, day):
-        date = f"{year}-{month}-{day}"
-        url = f"https://www.balldontlie.io/api/v1/games/?start_date={date}&end_date={date}"
-
-        r = requests.get(url)
-
-        return r.json()["data"]
-    
     def get_win_loss(self, team_id):
         t = time.localtime()
-        page = 1
+        page = 0
         nextpage = True
 
         wins = 0
         losses = 0
         while nextpage:
-            url = f"https://www.balldontlie.io/api/v1/games/?seasons[]={t[0] - 1}&team_ids[]={team_id}&per_page=100&page={page}"
-            r = requests.get(url).json()
+            r = nba.get_games(seasons=[t[0] - 1], team_ids=[team_id], per_page=100, page=page)
 
             nextpage = r["meta"]["next_page"] != None
             page += 1

@@ -3,6 +3,7 @@ from discord.ext import commands
 from discord import Option
 import discord
 import time
+import nba
 
 class Games(commands.Cog):
     def __init__(self, bot):
@@ -23,7 +24,7 @@ class Games(commands.Cog):
         embed = discord.Embed(title=f"NBA Games ({year}-{month}-{day})", color=self.bot.embed_color)
         embed.set_thumbnail(url=self.bot.thumbnail_link)
 
-        for game in self.bot.get_games(year, month, day):
+        for game in nba.get_games(start_date=f"{year}-{month}-{day}", per_page=100)["data"]:
             title = f"{game['visitor_team']['full_name']} at {game['home_team']['full_name']}"
             body = f"{game['status']} ({game['visitor_team_score']} - {game['home_team_score']})"
 
@@ -32,6 +33,7 @@ class Games(commands.Cog):
                     body += f" **{game['visitor_team']['name'].upper()} WIN**"
                 else:
                     body += f" **{game['home_team']['name'].upper()} WIN**"
+
 
             embed.add_field(name=title, value=body, inline=False)
 
