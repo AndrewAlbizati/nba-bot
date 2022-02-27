@@ -10,6 +10,9 @@ class Game(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
     
+    """
+    Returns autocompleted NBA games on a certain date.
+    """
     async def get_games(ctx):
         games = []
         try:
@@ -27,7 +30,9 @@ class Game(commands.Cog):
         
         return games
     
-    
+    """
+    Returns player stats for an NBA game.
+    """
     @slash_command(name="game", description="Lists stats for an NBA game")
     async def game(self, ctx, date: Option(str, "Date (YYYY-MM-DD)", required=False), game: Option(str, "Game", autocomplete=get_games, required=False)):     
         if game == None:
@@ -54,9 +59,11 @@ class Game(commands.Cog):
             return
         
         embed = discord.Embed(title=f"{selected_game_data['visitor_team']['full_name']} vs {selected_game_data['home_team']['full_name']}")
+
+        embed.description = f" **{selected_game_data['visitor_team']['abbreviation']}**: {selected_game_data['visitor_team_score']}\n**{selected_game_data['home_team']['abbreviation']}**: {selected_game_data['home_team_score']}"
         
         game_stats = nba.get_stats(game_ids=[selected_game_data["id"]], per_page=100)["data"]
-
+        print(game_stats)
         visitor_players = {}
         home_players = {}
         for player in game_stats:
@@ -88,14 +95,15 @@ class Game(commands.Cog):
             h_player_description += f"{player['player']['first_name']} {player['player']['last_name']}\n"
             h_stats_description += f"{player['min']}, **{player['reb']}** REB, **{player['ast']}** AST, **{player['pts']}** PTS\n"
 
+        if len(v_player_description) != 0 and len(v_stats_description) != 0:
+            embed.add_field(name=f"{selected_game_data['visitor_team']['name']} names", value=v_player_description)
+            embed.add_field(name=f"{selected_game_data['visitor_team']['name']} stats", value=v_stats_description)
+            embed.add_field(name='\u200b', value='\u200b') # Empty embed
 
-        embed.add_field(name=f"{selected_game_data['visitor_team']['name']} names", value=v_player_description)
-        embed.add_field(name=f"{selected_game_data['visitor_team']['name']} stats", value=v_stats_description)
-        embed.add_field(name='\u200b', value='\u200b')
-
-        embed.add_field(name=f"{selected_game_data['home_team']['name']} names", value=h_player_description)
-        embed.add_field(name=f"{selected_game_data['home_team']['name']} stats", value=h_stats_description)
-        embed.add_field(name='\u200b', value='\u200b')
+        if len(h_player_description) != 0 and len(h_stats_description) != 0:
+            embed.add_field(name=f"{selected_game_data['home_team']['name']} names", value=h_player_description)
+            embed.add_field(name=f"{selected_game_data['home_team']['name']} stats", value=h_stats_description)
+            embed.add_field(name='\u200b', value='\u200b') # Empty embed
 
         embed.color = self.bot.embed_color
 

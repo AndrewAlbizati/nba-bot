@@ -13,7 +13,7 @@ This Discord bot was written in Python 3.10 and uses the [balldontlie API](https
 - **/games [date (yyyy-mm-dd)]** Shows all NBA games that are playing on a specified date (defaults to the current day if none provided).
 - **/standings** Lists all NBA teams ranked by winning percentage.
 - **/team &lt;name>** Returns stats for a particular team in the NBA.
-- **/ [date (yyyy-mm-dd)] [game name]** Shows stats for a specified NBA game.
+- **/game [date (yyyy-mm-dd)] [game name]** Shows stats for a specified NBA game.
 
 
 ## Notes/Considerations
