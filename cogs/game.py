@@ -63,7 +63,7 @@ class Game(commands.Cog):
         embed.description = f" **{selected_game_data['visitor_team']['abbreviation']}**: {selected_game_data['visitor_team_score']}\n**{selected_game_data['home_team']['abbreviation']}**: {selected_game_data['home_team_score']}"
         
         game_stats = nba.get_stats(game_ids=[selected_game_data["id"]], per_page=100)["data"]
-        print(game_stats)
+        
         visitor_players = {}
         home_players = {}
         for player in game_stats:
