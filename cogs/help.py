@@ -14,7 +14,7 @@ class Help(commands.Cog):
         embed = discord.Embed(title="NBA Bot Commands", color=self.bot.embed_color)
         embed.set_thumbnail(url=self.bot.thumbnail_link)
 
-        embed.add_field(name="/games [date (mm-dd-yyyy)]", value="Lists NBA games that are playing today", inline=False)
+        embed.add_field(name="/games [date (yyyy-mm-dd)]", value="Lists NBA games that are playing today", inline=False)
         embed.add_field(name="/standings", value="Lists NBA teams ranked by winning percentage", inline=False)
         embed.add_field(name="/team <team name>", value="Lists stats on a particular NBA team", inline=False)
 

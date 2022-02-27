@@ -3,11 +3,17 @@ import requests
 
 MAIN_URL = "https://www.balldontlie.io/api/v1"
 
+"""
+Uses the requests library to access the JSON data from a url.
+"""
 def make_request(url):
     r = requests.get(url)
 
     return r.json()
 
+"""
+Search for data about a player including team information and sometimes height and weight.
+"""
 def search_player(search, page=0, per_page=25):
     url = f"{MAIN_URL}/players?"
 
@@ -18,11 +24,17 @@ def search_player(search, page=0, per_page=25):
 
     return make_request(url)
 
+"""
+Get information about an NBA player including team information and sometimes height and weight based off of their id.
+"""
 def get_player(id):
     url = f"{MAIN_URL}/players/{id}"
 
     return make_request(url)
 
+"""
+Gets information about all NBA teams including name, division, and conference.
+"""
 def get_all_teams(page=0, per_page=30):
     url = f"{MAIN_URL}/teams?"
     
@@ -31,11 +43,17 @@ def get_all_teams(page=0, per_page=30):
 
     return make_request(url)
 
+"""
+Gets information about a specific NBA team based off of its id.
+"""
 def get_team(id):
     url = f"{MAIN_URL}/teams/{id}"
 
     return make_request(url)
 
+"""
+Gets information about NBA games including scores and teams.
+"""
 def get_games(page=0, per_page=25, dates=None, seasons=None, team_ids=None, postseason=None, start_date=None, end_date=None):
     url = f"{MAIN_URL}/games?"
 
@@ -65,11 +83,17 @@ def get_games(page=0, per_page=25, dates=None, seasons=None, team_ids=None, post
 
     return make_request(url)
 
+"""
+Gets information about a specific NBA game based off of its id.
+"""
 def get_game(id):
     url = f"{MAIN_URL}/games/{id}"
 
     return make_request(url)
 
+"""
+Gets statistics about NBA players based off of their ids, game ids, etc.
+"""
 def get_stats(page=0, per_page=25, dates=None, seasons=None, player_ids=None, game_ids=None, postseason=None, start_date=None, end_date=None):
     url = f"{MAIN_URL}/stats?"
 
@@ -103,6 +127,9 @@ def get_stats(page=0, per_page=25, dates=None, seasons=None, player_ids=None, ga
 
     return make_request(url)
 
+"""
+Gets season average statistics for NBA players.
+"""
 def get_season_averages(season=None, player_ids=None):
     url = "https://www.balldontlie.io/api/v1/season_averages?"
 
