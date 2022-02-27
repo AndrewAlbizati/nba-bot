@@ -6,6 +6,11 @@ class Standings(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+    """
+    Returns the NBA winning standings for all teams seperated by conference.
+    Teams that will be guranteed a playoff spot are bolded.
+    Teams that will compete in the play-in tournament are italicized.
+    """
     @slash_command(name="standings", description="Lists NBA teams ranked by winning percentage")
     async def standings(self, ctx):
         embed = discord.Embed(title="NBA Teams", color=self.bot.embed_color)
@@ -64,5 +69,8 @@ class Standings(commands.Cog):
         embed.set_footer(text=f"Requested by {ctx.author}", icon_url=ctx.author.avatar)
         await ctx.respond(embed=embed)
 
+"""
+Registers command when the cog is setup.
+"""
 def setup(bot):
     bot.add_cog(Standings(bot))

@@ -9,6 +9,12 @@ class Games(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
     
+    """
+    Returns NBA games on a specified date (defaults to the current day if none is provided).
+    Example:
+    New Orleans Pelicans at Phoenix Suns
+    Final (117 - 102) **PELICANS WIN**
+    """
     @slash_command(name="games", description="Lists NBA games that are playing on a certain date")
     async def games(self, ctx, date: Option(str, "Date (YYYY-MM-DD)", required=False)):
         if date != None:
@@ -24,7 +30,7 @@ class Games(commands.Cog):
         embed = discord.Embed(title=f"NBA Games ({year}-{month}-{day})", color=self.bot.embed_color)
         embed.set_thumbnail(url=self.bot.thumbnail_link)
 
-        for game in nba.get_games(start_date=f"{year}-{month}-{day}", per_page=100)["data"]:
+        for game in nba.get_games(start_date=f"{year}-{month}-{day}", end_date=f"{year}-{month}-{day}", per_page=100)["data"]:
             title = f"{game['visitor_team']['full_name']} at {game['home_team']['full_name']}"
             body = f"{game['status']} ({game['visitor_team_score']} - {game['home_team_score']})"
 
@@ -40,5 +46,8 @@ class Games(commands.Cog):
         embed.set_footer(text=f"Requested by {ctx.author}", icon_url=ctx.author.avatar)
         await ctx.respond(embed=embed)
 
+"""
+Registers command when the cog is setup.
+"""
 def setup(bot):
     bot.add_cog(Games(bot))

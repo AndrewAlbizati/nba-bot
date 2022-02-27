@@ -3,19 +3,31 @@ from discord.ext import commands
 from discord import Option
 import discord
 import time
-import requests
 import nba
-
-async def get_autocompleted_team_names(ctx):
-    names = ["Atlanta Hawks", "Boston Celtics", "Brooklyn Nets", "Charlotte Hornets", "Chicago Bulls", "Cleveland Cavaliers", "Dallas Mavericks", "Denver Nuggets", "Detroit Pistons", "Golden State Warriors", "Houston Rockets", "Indiana Pacers", "LA Clippers", "Los Angeles Lakers", "Memphis Grizzlies", "Miami Heat", "Milwaukee Bucks", "Minnesota Timberwolves", "New Orleans Pelicans", "New York Knicks", "Oklahoma City Thunder", "Orlando Magic", "Philadelphia 76ers", "Phoenix Suns", "Portland Trail Blazers", "Sacramento Kings", "Toronto Raptors", "Utah Jazz", "Washington Wizards"]
-    return [name for name in names if ctx.value.lower() in name.lower()]
 
 class Team(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+    """
+    Autocompletes the user's search for an NBA team.
+    Returns which teams the user is able to request data from.
+    """
+    async def get_autocompleted_team_names(ctx):
+        names = ["Atlanta Hawks", "Boston Celtics", "Brooklyn Nets", "Charlotte Hornets", "Chicago Bulls", "Cleveland Cavaliers", "Dallas Mavericks", "Denver Nuggets", "Detroit Pistons", "Golden State Warriors", "Houston Rockets", "Indiana Pacers", "LA Clippers", "Los Angeles Lakers", "Memphis Grizzlies", "Miami Heat", "Milwaukee Bucks", "Minnesota Timberwolves", "New Orleans Pelicans", "New York Knicks", "Oklahoma City Thunder", "Orlando Magic", "Philadelphia 76ers", "Phoenix Suns", "Portland Trail Blazers", "Sacramento Kings", "Toronto Raptors", "Utah Jazz", "Washington Wizards"]
+        return [name for name in names if ctx.value.lower() in name.lower()]
+
+    """
+    This command returns information about a specific team. This command returns the following data:
+    Season win/loss
+    Conference standing
+    Home record
+    Away record
+    Streak
+    Last 5 games
+    """
     @slash_command(name="team",description="Lists stats on a particular NBA team")
-    async def team(self, ctx, name: Option(str, "NBA team name", autocomplete=get_autocompleted_team_names)):    
+    async def team(self, ctx, name: Option(str, "NBA team name", autocomplete=get_autocompleted_team_names)):
         team_id = 0
         for key in self.bot.team_data:
             if self.bot.team_data[key]["full_name"].lower() == name.lower() or self.bot.team_data[key]["name"].lower() == name.lower():
@@ -25,6 +37,8 @@ class Team(commands.Cog):
         if team_id == 0:
             await ctx.respond("Please pick a valid NBA team!", ephemeral=True)
             return
+
+        message = await ctx.respond("Collecting data...")
         
         embed = discord.Embed(title=f"{name} ({self.bot.team_data[str(team_id)]['abbreviation']})")
         embed.color = discord.Color.from_rgb(self.bot.team_data[str(team_id)]["color"][0], self.bot.team_data[str(team_id)]["color"][1], self.bot.team_data[str(team_id)]["color"][2])
@@ -98,8 +112,14 @@ class Team(commands.Cog):
 
         embed.add_field(name=f"Last {len(last_five)} Games ({wins} - {losses})", value="\n".join(last_five), inline=False)
 
-        await ctx.respond(embed=embed)
+        embed.set_footer(text=f"Requested by {ctx.author}", icon_url=ctx.author.avatar)
 
+        await message.edit_original_message(content="", embed=embed)
+
+
+    """
+    Returns the last n games that have been finished by a specific team.
+    """
     def get_last_scores(self, data, team_id, n):
         games = {}
 
@@ -136,6 +156,10 @@ class Team(commands.Cog):
 
         return data
     
+    """
+    Returns a team's current win streak in the season.
+    (e.g. "2L" or "5W")
+    """
     def get_streak(self, data, team_id):
         games = {}
         for game in data:
@@ -181,6 +205,8 @@ class Team(commands.Cog):
             
         return f"{streak}{'W' if on_winning_streak else 'L'}"
 
-
+"""
+Registers command when the cog is setup.
+"""
 def setup(bot):
     bot.add_cog(Team(bot))

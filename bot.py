@@ -1,7 +1,6 @@
 import discord
 from discord.ext import commands
 import asyncio
-import requests
 import random
 import json
 import time
@@ -20,6 +19,9 @@ class Bot(commands.Bot):
     team_win_loss = {}
     games_played_today = []
 
+    """
+    Initializes all teams win/loss data, loads cogs.
+    """
     def __init__(self):
         super().__init__()
         self.loop.create_task(self.change_status())
@@ -36,13 +38,17 @@ class Bot(commands.Bot):
                 self.load_extension(f"cogs.{cog[:-3]}")
                 print("Loaded " + cog)
 
-    
+    """
+    Changes the bot's status every ten minutes and checks if a game is playing.
+    Example status:
+    Watching Lakers vs Celtics
+    """
     async def change_status(self):
         await self.wait_until_ready()
 
         while not self.is_closed():
             t = time.localtime()
-            games = nba.get_games(start_date=f"{t[0]}-{t[1]}-{t[2]}", per_page=100)["data"]
+            games = nba.get_games(start_date=f"{t[0]}-{t[1]}-{t[2]}", end_date=f"{t[0]}-{t[1]}-{t[2]}", per_page=100)["data"]
 
             active_games = []
 
@@ -62,13 +68,16 @@ class Bot(commands.Bot):
                 await self.change_presence(status=discord.Status.online, activity=activity)
             await asyncio.sleep(60 * 10) # 10 minutes 
 
+    """
+    Updates the win/loss for all teams every minute.
+    """
     async def update_games(self):
         await self.wait_until_ready()
 
         while not self.is_closed():
             try:
                 t = time.localtime()
-                games = nba.get_games(start_date=f"{t[0]}-{t[1]}-{t[2]}", per_page=100)["data"]
+                games = nba.get_games(start_date=f"{t[0]}-{t[1]}-{t[2]}", end_date=f"{t[0]}-{t[1]}-{t[2]}", per_page=100)["data"]
 
                 for game in games:
                     if game["status"] == "Final" and not int(game["id"]) in self.games_played_today:
@@ -109,7 +118,9 @@ class Bot(commands.Bot):
     async def on_ready(self):
         print(f'{self.user} has connected to Discord!')
         
-    
+    """
+    Gets the win/loss record for a specific team.
+    """
     def get_win_loss(self, team_id):
         t = time.localtime()
         page = 0
