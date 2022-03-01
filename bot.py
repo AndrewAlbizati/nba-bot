@@ -39,7 +39,7 @@ class Bot(commands.Bot):
                 print("Loaded " + cog)
 
     """
-    Changes the bot's status every ten minutes and checks if a game is playing.
+    Changes the bot's status every two minutes and checks if a game is playing.
     Example status:
     Watching Lakers vs Celtics
     """
@@ -66,7 +66,7 @@ class Bot(commands.Bot):
                 activity = discord.Activity(type=discord.ActivityType.watching, name=status)
 
                 await self.change_presence(status=discord.Status.online, activity=activity)
-            await asyncio.sleep(60 * 10) # 10 minutes 
+            await asyncio.sleep(60 * 2) # 2 minutes 
 
     """
     Updates the win/loss for all teams every minute.

@@ -1,9 +1,11 @@
-from tkinter import E
 from discord.commands import slash_command
 from discord.ext import commands
+from discord.ext import pages
 from discord import Option
 import discord
 import time
+
+from numpy import False_
 import nba
 
 class Game(commands.Cog):
@@ -58,11 +60,11 @@ class Game(commands.Cog):
             await ctx.respond("Please pick a valid NBA game!", ephemeral=True)
             return
         
-        embed = discord.Embed(title=f"{selected_game_data['visitor_team']['full_name']} vs {selected_game_data['home_team']['full_name']}")
-
-        embed.description = f" **{selected_game_data['visitor_team']['abbreviation']}**: {selected_game_data['visitor_team_score']}\n**{selected_game_data['home_team']['abbreviation']}**: {selected_game_data['home_team_score']}"
-        
         game_stats = nba.get_stats(game_ids=[selected_game_data["id"]], per_page=100)["data"]
+
+        if len(game_stats) == 0:
+            await ctx.respond("This game hasn't started yet! Data will appear once this game has started.", ephemeral=True)
+            return
         
         visitor_players = {}
         home_players = {}
@@ -75,40 +77,44 @@ class Game(commands.Cog):
             elif player["team"]["id"] == selected_game_data["home_team"]["id"]:
                 home_players[player["id"]] = player
         
+        if len(visitor_players) == 0 and len(home_players) == 0:
+            await ctx.respond("This game hasn't started yet! Data will appear once this game has started.", ephemeral=True)
+            return
+            
         v = sorted(visitor_players, key=lambda x : (int(visitor_players[x]["min"].split(":")[0]) * 60) + int(visitor_players[x]["min"].split(":")[1]))
         v.reverse()
 
         h = sorted(home_players, key=lambda x : (int(home_players[x]["min"].split(":")[0]) * 60) + int(home_players[x]["min"].split(":")[1]))
         h.reverse()
                 
-        v_player_description = ""
-        v_stats_description = ""
-        for player_id in v:
-            player = visitor_players[player_id]
-            v_player_description += f"{player['player']['first_name']} {player['player']['last_name']}\n"
-            v_stats_description += f"{player['min']}, **{player['reb']}** REB, **{player['ast']}** AST, **{player['pts']}** PTS\n"
+        stats = ["min", "pts", "ast", "blk", "reb", "stl"]
+        stats_names = ["Minutes", "Points", "Assists", "Blocks", "Rebounds", "Steals"]
+        stats_pages = []
+        for i in range(len(stats)):
+            embed = discord.Embed(title=f"{selected_game_data['visitor_team']['full_name']} vs {selected_game_data['home_team']['full_name']}")
+            embed.color = self.bot.embed_color
+            embed.description = f"__{selected_game_data['status']}__\n**{selected_game_data['visitor_team']['abbreviation']}**: {selected_game_data['visitor_team_score']}\n**{selected_game_data['home_team']['abbreviation']}**: {selected_game_data['home_team_score']}"
+            embed.set_footer(text=f"Requested by {ctx.author}", icon_url=ctx.author.avatar)
 
-        h_player_description = ""
-        h_stats_description = ""
-        for player_id in h:
-            player = home_players[player_id]
-            h_player_description += f"{player['player']['first_name']} {player['player']['last_name']}\n"
-            h_stats_description += f"{player['min']}, **{player['reb']}** REB, **{player['ast']}** AST, **{player['pts']}** PTS\n"
+            v_stats_description = ""
+            for player_id in v:
+                player = visitor_players[player_id]
+                v_stats_description += f"{player['player']['first_name']} {player['player']['last_name']}: **{player[stats[i]]}**\n"
 
-        if len(v_player_description) != 0 and len(v_stats_description) != 0:
-            embed.add_field(name=f"{selected_game_data['visitor_team']['name']} names", value=v_player_description)
-            embed.add_field(name=f"{selected_game_data['visitor_team']['name']} stats", value=v_stats_description)
-            embed.add_field(name='\u200b', value='\u200b') # Empty embed
+            h_stats_description = ""
+            for player_id in h:
+                player = home_players[player_id]
+                h_stats_description += f"{player['player']['first_name']} {player['player']['last_name']}: **{player[stats[i]]}**\n"
 
-        if len(h_player_description) != 0 and len(h_stats_description) != 0:
-            embed.add_field(name=f"{selected_game_data['home_team']['name']} names", value=h_player_description)
-            embed.add_field(name=f"{selected_game_data['home_team']['name']} stats", value=h_stats_description)
-            embed.add_field(name='\u200b', value='\u200b') # Empty embed
 
-        embed.color = self.bot.embed_color
+            embed.add_field(name=f"{selected_game_data['visitor_team']['name']} {stats_names[i]}", value=v_stats_description, inline=True)
+            embed.add_field(name=f"{selected_game_data['home_team']['name']} {stats_names[i]}", value=h_stats_description, inline=True)
+            
+            stats_pages.append([embed])
 
-        embed.set_footer(text=f"Requested by {ctx.author}", icon_url=ctx.author.avatar)
-        await ctx.respond(embed=embed)
+        
+        paginator = pages.Paginator(pages=stats_pages, loop_pages=True)
+        await paginator.respond(ctx.interaction, ephemeral=False)
 
 """
 Registers command when the cog is setup.
