@@ -10,10 +10,6 @@ import nba
 class Bot(commands.Bot):
     embed_color = 0x1d428a
 
-    season_start_year = 2021
-    season_start_month = 10
-    season_start_day = 19
-
     thumbnail_link = "https://theprodigious.com/wp-content/uploads/2021/09/nba-logo.jpg"
 
     team_win_loss = {}
@@ -29,6 +25,12 @@ class Bot(commands.Bot):
 
         with open("teams.json", "r") as f:
             self.team_data = json.load(f)
+
+        with open("config.json", "r") as f:
+            data = json.load(f)
+            self.season_start_year = data["season_start_year"]
+            self.season_start_month = data["season_start_month"]
+            self.season_start_day = data["season_start_day"]
         
         for key in self.team_data:
             self.team_win_loss[int(key)] = self.get_win_loss(int(key))
@@ -39,7 +41,7 @@ class Bot(commands.Bot):
                 print("Loaded " + cog)
 
     """
-    Changes the bot's status every two minutes and checks if a game is playing.
+    Changes the bot's status every ten minutes and checks if a game is playing.
     Example status:
     Watching Lakers vs Celtics
     """
@@ -129,7 +131,7 @@ class Bot(commands.Bot):
         wins = 0
         losses = 0
         while nextpage:
-            r = nba.get_games(seasons=[t[0] - 1], team_ids=[team_id], per_page=100, page=page)
+            r = nba.get_games(start_date=f"{self.season_start_year}-{self.season_start_month}-{self.season_start_day}", team_ids=[team_id], per_page=100, page=page)
 
             nextpage = r["meta"]["next_page"] != None
             page += 1
@@ -137,22 +139,7 @@ class Bot(commands.Bot):
             for game in r["data"]:
                 if game["status"].lower() != "final":
                     continue
-                    
-                date = game["date"].split("-")
-
-                year = int(date[0])
-                month = int(date[1])
-                day = int(date[2].split("T")[0])
-
-                if year < self.season_start_year:
-                    continue
-
-                if year == self.season_start_year:
-                    if month < self.season_start_month:
-                        continue
-                    if month == self.season_start_month and day < self.season_start_day:
-                        continue
-                
+            
                 # Fix incorrect game score
                 if game["id"] == 474073:
                     game["home_team_score"] = 101

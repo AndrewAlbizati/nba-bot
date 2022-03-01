@@ -6,6 +6,9 @@ if __name__ == "__main__":
         f = open("config.json", "x") # Raises FileExistsError if already present
         data = {}
         data["discord-bot-token"] = "{PASTE TOKEN INSIDE QUOTATION MARKS}"
+        data["season_start_year"] = "{PASTE WITHOUT QUOTATION MARKS}"
+        data["season_start_month"] = "{PASTE WITHOUT QUOTATION MARKS}"
+        data["season_start_day"] = "{PASTE WITHOUT QUOTATION MARKS}"
 
         json.dump(data, f, indent=4)
         f.close()

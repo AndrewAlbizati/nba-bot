@@ -1,11 +1,8 @@
 from discord.commands import slash_command
-from discord.ext import commands
-from discord.ext import pages
+from discord.ext import commands, pages
 from discord import Option
 import discord
 import time
-
-from numpy import False_
 import nba
 
 class Game(commands.Cog):
@@ -41,6 +38,7 @@ class Game(commands.Cog):
             await ctx.respond("Please pick a valid NBA game!", ephemeral=True)
             return
         
+        # Defaults to the current date if none is provided
         if date == None:
             t = time.localtime()
             date = f"{t[0]}-{t[1]}-{t[2]}"
@@ -66,6 +64,8 @@ class Game(commands.Cog):
             await ctx.respond("This game hasn't started yet! Data will appear once this game has started.", ephemeral=True)
             return
         
+        # Sort players by their minutes in game
+        # Remove players with less than one minute
         visitor_players = {}
         home_players = {}
         for player in game_stats:
@@ -86,7 +86,9 @@ class Game(commands.Cog):
 
         h = sorted(home_players, key=lambda x : (int(home_players[x]["min"].split(":")[0]) * 60) + int(home_players[x]["min"].split(":")[1]))
         h.reverse()
-                
+        
+        # Create a list of Discord embeds
+        # One embed for each stat
         stats = ["min", "pts", "ast", "blk", "reb", "stl"]
         stats_names = ["Minutes", "Points", "Assists", "Blocks", "Rebounds", "Steals"]
         stats_pages = []

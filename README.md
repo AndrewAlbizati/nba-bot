@@ -5,7 +5,7 @@ This Discord bot was written in Python 3.10 and uses the [balldontlie API](https
 1. Run `python --version` and ensure it is at least version 3.10
 2. In the same folder as all of the files, run `pip install -r requirements.txt`
 3. Run `python main.py`
-4. Update the newly created `config.json` with the bot's token.
+4. Update the newly created `config.json` with the bot's token and season start information.
 5. Run `python main.py` and wait a few seconds for the bot to collect data.
 
 ## Commands
