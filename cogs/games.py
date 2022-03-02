@@ -13,7 +13,9 @@ class Games(commands.Cog):
     Returns NBA games on a specified date (defaults to the current day if none is provided).
     Example:
     New Orleans Pelicans at Phoenix Suns
-    Final (117 - 102) **PELICANS WIN**
+    __Final__
+    **NOP**: 117 **WIN**
+    **PHX**: 102
     """
     @slash_command(name="games", description="Lists NBA games that are playing on a certain date")
     async def games(self, ctx, date: Option(str, "Date (YYYY-MM-DD)", required=False)):
@@ -32,14 +34,17 @@ class Games(commands.Cog):
 
         for game in nba.get_games(start_date=f"{year}-{month}-{day}", end_date=f"{year}-{month}-{day}", per_page=100)["data"]:
             title = f"{game['visitor_team']['full_name']} at {game['home_team']['full_name']}"
-            body = f"{game['status']} ({game['visitor_team_score']} - {game['home_team_score']})"
+            body = f"**{game['visitor_team']['abbreviation']}**: {game['visitor_team_score']} **{game['home_team']['abbreviation']}**: {game['home_team_score']}"
 
-            if game["status"].lower() == "final":
+            if game["status"] == "Final":
                 if game['visitor_team_score'] > game['home_team_score']:
-                    body += f" **{game['visitor_team']['name'].upper()} WIN**"
-                else:
-                    body += f" **{game['home_team']['name'].upper()} WIN**"
+                    body += f" *{game['visitor_team']['name']} WIN*"
+                
+                elif game['home_team_score'] > game['visitor_team_score']:
+                    body += f" *{game['home_team']['name']} WIN*"
 
+            if game['status'] != "Final":
+                body += "\n{} {}".format(game['status'], f"({game['time']})" if len(game['time']) > 0 else "")
 
             embed.add_field(name=title, value=body, inline=False)
 

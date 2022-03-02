@@ -97,7 +97,9 @@ class Game(commands.Cog):
         for i in range(len(stats)):
             embed = discord.Embed(title=f"{selected_game_data['visitor_team']['full_name']} vs {selected_game_data['home_team']['full_name']}")
             embed.color = self.bot.embed_color
-            embed.description = f"__{selected_game_data['status']}__\n**{selected_game_data['visitor_team']['abbreviation']}**: {selected_game_data['visitor_team_score']}\n**{selected_game_data['home_team']['abbreviation']}**: {selected_game_data['home_team_score']}"
+
+            status = "__{}__ {}".format(selected_game_data['status'], f"({selected_game_data['time']})" if len(selected_game_data['time']) > 0 else "")
+            embed.description = f"{status}\n**{selected_game_data['visitor_team']['abbreviation']}**: {selected_game_data['visitor_team_score']}\n**{selected_game_data['home_team']['abbreviation']}**: {selected_game_data['home_team_score']}"
             embed.set_footer(text=f"Requested by {ctx.author}", icon_url=ctx.author.avatar)
 
             v_stats_description = ""
