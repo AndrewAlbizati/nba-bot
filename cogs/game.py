@@ -31,9 +31,11 @@ class Game(commands.Cog):
     
     """
     Returns player stats for an NBA game.
+    The date of the game can be configured with the [date] option.
+    The user then picks the game in the [game] option from multiple options.
     """
     @slash_command(name="game", description="Lists stats for an NBA game")
-    async def game(self, ctx, date: Option(str, "Date (YYYY-MM-DD)", required=False), game: Option(str, "Game", autocomplete=get_games, required=False)):     
+    async def game(self, ctx, date: Option(str, "Date (YYYY-MM-DD)", required=False), game: Option(str, "Game", autocomplete=get_games, required=False)):
         if game == None:
             await ctx.respond("Please pick a valid NBA game!", ephemeral=True)
             return
@@ -43,8 +45,8 @@ class Game(commands.Cog):
             t = time.localtime()
             date = f"{t[0]}-{t[1]}-{t[2]}"
 
-        games_data = nba.get_games(per_page=100, start_date=date,end_date=date)
-        
+        # Searches for the specific game
+        games_data = nba.get_games(per_page=100, start_date=date,end_date=date) 
         for game_data in games_data['data']:
             if game_data["visitor_team"]["name"].lower() != game.split(" vs ")[0].lower():
                 continue
@@ -58,8 +60,8 @@ class Game(commands.Cog):
             await ctx.respond("Please pick a valid NBA game!", ephemeral=True)
             return
         
-        game_stats = nba.get_stats(game_ids=[selected_game_data["id"]], per_page=100)["data"]
 
+        game_stats = nba.get_stats(game_ids=[selected_game_data["id"]], per_page=100)["data"]
         if len(game_stats) == 0:
             await ctx.respond("This game hasn't started yet! Data will appear once this game has started.", ephemeral=True)
             return
@@ -115,7 +117,9 @@ class Game(commands.Cog):
             stats_pages.append([embed])
 
         
-        paginator = pages.Paginator(pages=stats_pages, loop_pages=True)
+        paginator = pages.Paginator(pages=stats_pages)
+        paginator.remove_button("first")
+        paginator.remove_button("last")
         await paginator.respond(ctx.interaction, ephemeral=False)
 
 """

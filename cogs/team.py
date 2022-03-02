@@ -59,8 +59,7 @@ class Team(commands.Cog):
             else:
                 break
 
-        get_ordinal = lambda n: "%d%s"%(n,{1:"st",2:"nd",3:"rd"}.get(n if n<20 else n%10,"th"))
-        rank_in_conference = get_ordinal(rank)
+        rank_in_conference = "%d%s"%(rank,{1:"st",2:"nd",3:"rd"}.get(rank if rank < 20 else rank % 10,"th"))
 
         embed.add_field(name="Season Win/Loss",value=f"**{win_loss[0]} - {win_loss[1]}** ({round(win_loss[0] / (win_loss[0] + win_loss[1]), 3)})\n*{rank_in_conference.upper()} IN {self.bot.team_data[str(key)]['conference'].upper()}*", inline=False)
 
@@ -94,7 +93,6 @@ class Team(commands.Cog):
                     away_losses += 1
 
         embed.add_field(name="Home", value=f"{home_wins} - {home_losses}", inline=True)
-
         embed.add_field(name="Away", value=f"{away_wins} - {away_losses}", inline=True)
 
         embed.add_field(name="Streak", value=self.get_streak(data, team_id), inline=True)

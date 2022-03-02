@@ -82,7 +82,7 @@ class Bot(commands.Bot):
                 games = nba.get_games(start_date=f"{t[0]}-{t[1]}-{t[2]}", end_date=f"{t[0]}-{t[1]}-{t[2]}", per_page=100)["data"]
 
                 for game in games:
-                    if game["status"] == "Final" and not int(game["id"]) in self.games_played_today:
+                    if game["status"] == "Final" and not int(game["id"]) in self.games_played_today and not game["postseason"]:
                         if game["home_team_score"] > game["visitor_team_score"]:
                             winner_id = game["home_team"]["id"]
                             loser_id = game["visitor_team"]["id"]
@@ -137,7 +137,10 @@ class Bot(commands.Bot):
             page += 1
 
             for game in r["data"]:
-                if game["status"].lower() != "final":
+                if game["status"] != "Final":
+                    continue
+
+                if game["postseason"]:
                     continue
             
                 # Fix incorrect game score

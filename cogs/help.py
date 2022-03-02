@@ -17,6 +17,7 @@ class Help(commands.Cog):
         embed.add_field(name="/games [date (yyyy-mm-dd)]", value="Lists NBA games that are playing today", inline=False)
         embed.add_field(name="/standings", value="Lists NBA teams ranked by winning percentage", inline=False)
         embed.add_field(name="/team <team name>", value="Lists stats on a particular NBA team", inline=False)
+        embed.add_field(name="/game [date (yyyy-mm-dd)] [game name]", value="Shows stats for a specified NBA game.", inline=False)
 
         embed.set_footer(text=f"Requested by {ctx.author}", icon_url=ctx.author.avatar)
         await ctx.respond(embed=embed)
