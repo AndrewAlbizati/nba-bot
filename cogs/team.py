@@ -201,7 +201,7 @@ class Team(commands.Cog):
             else:
                 break
             
-        return f"{streak}{'W' if on_winning_streak else 'L'}"
+        return f"{'W' if on_winning_streak else 'L'}{streak}"
 
 """
 Registers command when the cog is setup.
